@@ -2,6 +2,9 @@ print("[RX] Loading...")
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 local pg = player:WaitForChild("PlayerGui")
 
@@ -38,14 +41,33 @@ local function drag(f, a)
     end)
 end
 
-local gui = Instance.new("ScreenGui") gui.Name = "BodyBasilRX" gui.ResetOnSpawn = false gui.IgnoreGuiInset = true gui.DisplayOrder = 50 gui.Parent = pg
+local function createSlider(parent, pos, min, max, default, nameText, callback)
+    local vLbl = lbl(parent, nameText .. ": " .. default, UDim2.new(1, -20, 0, 16), UDim2.new(0, 10, 0, pos), 12)
+    vLbl.TextXAlignment = Enum.TextXAlignment.Left
+    local sH = Instance.new("Frame") sH.Size = UDim2.new(1, -20, 0, 22) sH.Position = UDim2.new(0, 10, 0, pos + 18) sH.BackgroundTransparency = 1 sH.Parent = parent
+    local sT = Instance.new("Frame") sT.Size = UDim2.new(1, -20, 0, 8) sT.Position = UDim2.new(0, 10, 0.5, -4) sT.BackgroundColor3 = PANEL sT.BorderSizePixel = 0 sT.Parent = sH cor(sT, 4) str(sT, RED, 1)
+    local ratio = (default - min) / (max - min)
+    local sF = Instance.new("Frame") sF.Size = UDim2.new(ratio, 0, 1, 0) sF.BackgroundColor3 = RED sF.BorderSizePixel = 0 sF.Parent = sT cor(sF, 4)
+    local sK = Instance.new("Frame") sK.Size = UDim2.fromOffset(18, 18) sK.AnchorPoint = Vector2.new(0.5, 0.5) sK.Position = UDim2.new(ratio, 0, 0.5, 0) sK.BackgroundColor3 = WHITE sK.ZIndex = 2 sK.Parent = sH cor(sK, 9) str(sK, RED, 2)
+    local dragState = false
+    local function update(x)
+        local p, w = sT.AbsolutePosition.X, sT.AbsoluteSize.X
+        if w <= 0 then return end
+        local r = math.clamp((x - p) / w, 0, 1)
+        local val = math.floor(min + r * (max - min))
+        vLbl.Text = nameText .. ": " .. val sF.Size = UDim2.new(r, 0, 1, 0) sK.Position = UDim2.new(r, 0, 0.5, 0) callback(val)
+    end
+    sT.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragState = true update(i.Position.X) end end)
+    sK.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragState = true end end)
+    UIS.InputChanged:Connect(function(i) if dragState and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then update(i.Position.X) end end)
+    UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragState = false end end)
+endlocal gui = Instance.new("ScreenGui") gui.Name = "BodyBasilRX" gui.ResetOnSpawn = false gui.IgnoreGuiInset = true gui.DisplayOrder = 50 gui.Parent = pg
 local sound = Instance.new("Sound") sound.Name = "BodyBasilRXMusic" sound.Volume = 0.5 sound.Looped = true sound.Parent = SoundService
 
 local main = Instance.new("Frame") main.Size = UDim2.fromOffset(330, 285) main.Position = UDim2.new(0.5, -165, 0.5, -142) main.BackgroundColor3 = DARK main.BorderSizePixel = 0 main.Active = true main.Parent = gui cor(main, 12) str(main, RED, 2)
 
 local hdr = Instance.new("Frame") hdr.Size = UDim2.new(1, 0, 0, 40) hdr.BackgroundColor3 = RED hdr.BorderSizePixel = 0 hdr.ZIndex = 5 hdr.Parent = main cor(hdr, 10)
 local ttl = lbl(hdr, "عمك بودي يا باسل RX 🩸", UDim2.new(1, -85, 1, 0), UDim2.fromOffset(10, 0), 14) ttl.TextXAlignment = Enum.TextXAlignment.Left ttl.ZIndex = 6
-
 local minB = btn(hdr, "-", UDim2.fromOffset(30, 28), UDim2.new(1, -68, 0, 6), PANEL) minB.TextSize = 22 minB.ZIndex = 6
 local clsB = btn(hdr, "X", UDim2.fromOffset(28, 28), UDim2.new(1, -34, 0, 6), Color3.fromRGB(100, 15, 25)) clsB.ZIndex = 6
 drag(main, hdr)
@@ -53,20 +75,23 @@ drag(main, hdr)
 local tbM = btn(main, "الموسيقى | Music", UDim2.fromOffset(85, 35), UDim2.new(1, 0, 0, 10), GOLD) tbM.TextColor3 = BLACK tbM.ZIndex = 10
 local tbA = btn(main, "الانيميشن | Anim", UDim2.fromOffset(85, 35), UDim2.new(1, 0, 0, 55), DARK) tbA.ZIndex = 10
 local tbAd = btn(main, "اوامر الادمن | Admin", UDim2.fromOffset(85, 35), UDim2.new(1, 0, 0, 100), DARK) tbAd.ZIndex = 10
+local tbP = btn(main, "اللاعب | Player", UDim2.fromOffset(85, 35), UDim2.new(1, 0, 0, 145), DARK) tbP.ZIndex = 10
 
 local pgM = Instance.new("Frame") pgM.Size = UDim2.new(1, 0, 1, 0) pgM.BackgroundTransparency = 1 pgM.Parent = main
 local pgA = Instance.new("Frame") pgA.Size = UDim2.new(1, 0, 1, 0) pgA.BackgroundTransparency = 1 pgA.Visible = false pgA.Parent = main
-local pgAd = Instance.new("Frame") pgAd.Size = UDim2.new(1, 0, 1, 0) pgAd.BackgroundTransparency = 1 pgAd.Visible = false pgAd.Parent = main
+local pgAd = Instance.new("ScrollingFrame") pgAd.Size = UDim2.new(1, 0, 1, -45) pgAd.Position = UDim2.new(0, 0, 0, 45) pgAd.BackgroundTransparency = 1 pgAd.Visible = false pgAd.Parent = main pgAd.CanvasSize = UDim2.new(0, 0, 0, 380) pgAd.ScrollBarThickness = 4 pgAd.ScrollBarImageColor3 = RED pgAd.BorderSizePixel = 0
+local pgP = Instance.new("ScrollingFrame") pgP.Size = UDim2.new(1, 0, 1, -45) pgP.Position = UDim2.new(0, 0, 0, 45) pgP.BackgroundTransparency = 1 pgP.Visible = false pgP.Parent = main pgP.CanvasSize = UDim2.new(0, 0, 0, 360) pgP.ScrollBarThickness = 4 pgP.ScrollBarImageColor3 = RED pgP.BorderSizePixel = 0
 
 local animL = false
 local function swt(t)
-    pgM.Visible = t == "M" pgA.Visible = t == "A" pgAd.Visible = t == "Ad"
+    pgM.Visible = t == "M" pgA.Visible = t == "A" pgAd.Visible = t == "Ad" pgP.Visible = t == "P"
     tbM.BackgroundColor3 = t == "M" and GOLD or DARK tbM.TextColor3 = t == "M" and BLACK or WHITE
     tbA.BackgroundColor3 = t == "A" and GOLD or DARK tbA.TextColor3 = t == "A" and BLACK or WHITE
     tbAd.BackgroundColor3 = t == "Ad" and GOLD or DARK tbAd.TextColor3 = t == "Ad" and BLACK or WHITE
+    tbP.BackgroundColor3 = t == "P" and GOLD or DARK tbP.TextColor3 = t == "P" and BLACK or WHITE
     if t == "A" and not animL then animL = true pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Bac0nHck/Scripts/refs/heads/main/BundleAnimations.lua"))() end) end
 end
-tbM.Activated:Connect(function() swt("M") end) tbA.Activated:Connect(function() swt("A") end) tbAd.Activated:Connect(function() swt("Ad") end)
+tbM.Activated:Connect(function() swt("M") end) tbA.Activated:Connect(function() swt("A") end) tbAd.Activated:Connect(function() swt("Ad") end) tbP.Activated:Connect(function() swt("P") end)
 
 local sInd = 1
 local sBtn = btn(pgM, "", UDim2.new(1, -20, 0, 34), UDim2.fromOffset(10, 49), PANEL) pill(sBtn) str(sBtn, RED, 1)
@@ -106,16 +131,9 @@ local sT = Instance.new("Frame") sT.Size = UDim2.new(1, -20, 0, 8) sT.Position =
 local sF = Instance.new("Frame") sF.Size = UDim2.new(vol / 200, 0, 1, 0) sF.BackgroundColor3 = RED sF.BorderSizePixel = 0 sF.Parent = sT cor(sF, 4)
 local sK = Instance.new("Frame") sK.Size = UDim2.fromOffset(18, 18) sK.AnchorPoint = Vector2.new(0.5, 0.5) sK.Position = UDim2.new(vol / 200, 0, 0.5, 0) sK.BackgroundColor3 = WHITE sK.ZIndex = 2 sK.Parent = sH cor(sK, 9) str(sK, RED, 2)
 
-local function setV(v)
-    vol = math.clamp(math.floor(v + 0.5), 0, 200) sound.Volume = vol / 100
-    vLbl.Text = "الصوت: " .. vol sF.Size = UDim2.new(vol / 200, 0, 1, 0) sK.Position = UDim2.new(vol / 200, 0, 0.5, 0)
-end
+local function setV(v) vol = math.clamp(math.floor(v + 0.5), 0, 200) sound.Volume = vol / 100 vLbl.Text = "الصوت: " .. vol sF.Size = UDim2.new(vol / 200, 0, 1, 0) sK.Position = UDim2.new(vol / 200, 0, 0.5, 0) end
 local dV = false
-local function updV(x)
-    local p, w = sT.AbsolutePosition.X, sT.AbsoluteSize.X
-    if w <= 0 then return end
-    setV(math.clamp((x - p) / w, 0, 1) * 200)
-end
+local function updV(x) local p, w = sT.AbsolutePosition.X, sT.AbsoluteSize.X if w <= 0 then return end setV(math.clamp((x - p) / w, 0, 1) * 200) end
 sT.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dV = true updV(i.Position.X) end end)
 sK.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dV = true end end)
 UIS.InputChanged:Connect(function(i) if dV and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then updV(i.Position.X) end end)
@@ -128,87 +146,32 @@ local stF = Instance.new("Frame") stF.Size = UDim2.new(1, -20, 0, 26) stF.Positi
 local stL = lbl(stF, "جاهز للتشغيل", UDim2.new(1, 0, 1, 0), UDim2.fromOffset(0, 0), 12) stL.TextColor3 = GRAY
 
 pB.Activated:Connect(function()
-    local c = cBox.Text:gsub("%s+", "")
-    local id = (c ~= "" and c:match("^%d+$")) and c or (c == "" and musicList[sInd])
+    local c = cBox.Text:gsub("%s+", "") local id = (c ~= "" and c:match("^%d+$")) and c or (c == "" and musicList[sInd])
     if not id then stL.Text = "ID غير صحيح" stL.TextColor3 = RED return end
-    sound:Stop() sound.SoundId = "rbxassetid://" .. id sound.Volume = vol / 100
-    stL.Text = "جاري التشغيل..." stL.TextColor3 = WHITE
+    sound:Stop() sound.SoundId = "rbxassetid://" .. id sound.Volume = vol / 100 stL.Text = "جاري التشغيل..." stL.TextColor3 = WHITE
     local s, e = pcall(function() sound:Play() end)
     if s then stL.Text = "تم التشغيل: " .. id stL.TextColor3 = GREEN else stL.Text = "تعذر التشغيل" stL.TextColor3 = RED end
 end)
 stB.Activated:Connect(function() sound:Stop() stL.Text = "تم الإيقاف" stL.TextColor3 = GRAY end)
 
 lbl(pgA, "قسم الأنيميشن", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 50), 16).TextColor3 = GOLD
-lbl(pgA, "اضغط على تاب الأنيميشن بالأعلى لفتح قائمة الـ Bundle Animations", UDim2.new(1, -40, 0, 60), UDim2.fromOffset(20, 100), 13).TextColor3 = GRAY
+lbl(pgA, "اضغط على تاب الأنيميشن بالأعلى لفتح القائمة", UDim2.new(1, -40, 0, 60), UDim2.fromOffset(20, 100), 13).TextColor3 = GRAY
 
-lbl(pgAd, "أوامر الأدمن", UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 45), 16).TextColor3 = GOLD
+lbl(pgAd, "أوامر الأدمن", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 5), 16).TextColor3 = GOLD
+local function mkAdm(t, y, c, fn) local b = btn(pgAd, t, UDim2.new(1, -40, 0, 32), UDim2.fromOffset(20, y), c) pill(b) str(b, WHITE, 1) b.TextSize = 14 b.Activated:Connect(fn) return b end
+local aSt = lbl(pgAd, "اضغط على أي أمر لتشغيله", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 315), 11) aSt.TextColor3 = GRAY
 
-local function mkAdm(t, y, c, fn)
-    local b = btn(pgAd, t, UDim2.new(1, -40, 0, 38), UDim2.fromOffset(20, y), c)
-    pill(b) str(b, WHITE, 1) b.TextSize = 14
-    b.Activated:Connect(fn)
-    return b
-end
+mkAdm("flyV2", 35, RED, function() aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-Flyv2-30617"))() end) if s then aSt.Text = "تم تشغيل FlyV2" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end end)
+mkAdm("VR7", 75, RED, function() aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-VR7-45290"))() end) if s then aSt.Text = "تم تشغيل VR7" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end end)
+mkAdm("adminX2", 115, RED, function() aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-Nameless-admin-232171"))() end) if s then aSt.Text = "تم تشغيل AdminX2" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end end)
+mkAdm("تخفيف اللاج", 155, Color3.fromRGB(30, 120, 80), function() aSt.Text = "جاري تخفيف اللاج..." aSt.TextColor3 = WHITE pcall(function() local L = game:GetService("Lighting") L.GlobalShadows = false L.FogEnd = 100000 L.Brightness = 1 L.EnvironmentDiffuseScale = 0 L.EnvironmentSpecularScale = 0 for _, v in ipairs(L:GetChildren()) do if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") then v:Destroy() end end for _, v in ipairs(workspace:GetDescendants()) do if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Beam") then v:Destroy() end if v:IsA("BasePart") then v.CastShadow = false v.Material = Enum.Material.SmoothPlastic end end local T = workspace:FindFirstChildOfClass("Terrain") if T then T.WaterWaveSize = 0 T.WaterWaveSpeed = 0 T.WaterReflectance = 0 T.WaterTransparency = 1 end pcall(function() settings().Rendering.QualityLevel = 1 end) end) aSt.Text = "تم تخفيف اللاج!" aSt.TextColor3 = GREEN end)
 
-local aSt = lbl(pgAd, "اضغط على أي أمر لتشغيله", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 260), 11) aSt.TextColor3 = GRAY
+mkAdm("إعادة انضمام", 195, Color3.fromRGB(200, 150, 30), function() aSt.Text = "جاري إعادة الانضمام..." aSt.TextColor3 = WHITE pcall(function() if game.JobId ~= "" then TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player) else TeleportService:Teleport(game.PlaceId, player) end end) end)
+mkAdm("انضمام لسيرفر تاني", 235, Color3.fromRGB(50, 120, 200), function() aSt.Text = "جاري البحث..." aSt.TextColor3 = WHITE local success = pcall(function() local api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" local res = HttpService:JSONDecode(game:HttpGet(api)) local servers = {} if res and res.data then for _, srv in ipairs(res.data) do if srv.playing < srv.maxPlayers and srv.id ~= game.JobId then table.insert(servers, srv.id) end end end if #servers > 0 then TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], player) else TeleportService:Teleport(game.PlaceId, player) end end) if not success then TeleportService:Teleport(game.PlaceId, player) end end)
 
-mkAdm("flyV2", 80, RED, function()
-    aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE
-    local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-Flyv2-30617"))() end)
-    if s then aSt.Text = "تم تشغيل FlyV2" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end
-end)
-
-mkAdm("VR7", 125, RED, function()
-    aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE
-    local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-VR7-45290"))() end)
-    if s then aSt.Text = "تم تشغيل VR7" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end
-end)
-
-mkAdm("adminX2", 170, RED, function()
-    aSt.Text = "جاري التحميل..." aSt.TextColor3 = WHITE
-    local s, e = pcall(function() loadstring(game:HttpGet("https://scriptblox.com/raw/Universal-Script-Nameless-admin-232171"))() end)
-    if s then aSt.Text = "تم تشغيل AdminX2" aSt.TextColor3 = GREEN else aSt.Text = "فشل" aSt.TextColor3 = RED end
-end)
-
-mkAdm("تخفيف اللاج", 215, Color3.fromRGB(30, 120, 80), function()
-    aSt.Text = "جاري تخفيف اللاج..." aSt.TextColor3 = WHITE
-    pcall(function()
-        local L = game:GetService("Lighting")
-        L.GlobalShadows = false L.FogEnd = 100000 L.Brightness = 1 L.EnvironmentDiffuseScale = 0 L.EnvironmentSpecularScale = 0
-        for _, v in ipairs(L:GetChildren()) do if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") then v:Destroy() end end
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") or v:IsA("Beam") then v:Destroy() end
-            if v:IsA("BasePart") then v.CastShadow = false v.Material = Enum.Material.SmoothPlastic end
-        end
-        local T = workspace:FindFirstChildOfClass("Terrain")
-        if T then T.WaterWaveSize = 0 T.WaterWaveSpeed = 0 T.WaterReflectance = 0 T.WaterTransparency = 1 end
-        pcall(function() settings().Rendering.QualityLevel = 1 end)
-    end)
-    aSt.Text = "تم تخفيف اللاج!" aSt.TextColor3 = GREEN
-end)
-
-local mini = btn(gui, "RX", UDim2.fromOffset(55, 55), UDim2.new(0, 15, 0.5, -27), RED)
-mini.Name = "RXMini" mini.TextSize = 17 mini.Visible = false str(mini, WHITE, 1)
-
-local isDM, mSP, mDS, mM = false, nil, nil, false
-mini.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        mSP = mini.Position mDS = i.Position isDM = true mM = false
-        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then isDM = false end end)
-    end
-end)
-UIS.InputChanged:Connect(function(i)
-    if isDM and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-        local d = i.Position - mDS
-        if math.abs(d.X) > 10 or math.abs(d.Y) > 10 then mM = true end
-        mini.Position = UDim2.new(mSP.X.Scale, mSP.X.Offset + d.X, mSP.Y.Scale, mSP.Y.Offset + d.Y)
-    end
-end)
-mini.Activated:Connect(function()
-    if not mM then main.Visible = true mini.Visible = false end
-end)
-
-minB.Activated:Connect(function() pkr.Visible = false main.Visible = false mini.Visible = true end)
-clsB.Activated:Connect(function() sound:Stop() sound:Destroy() gui:Destroy() end)
-
-print("[RX] Loaded successfully!")
+local isFlying = false
+local flySpeed = 50
+local flyBtn = btn(pgP, "FLY: OFF", UDim2.new(1, -40, 0, 30), UDim2.fromOffset(20, 5), RED) pill(flyBtn) str(flyBtn, WHITE, 1)
+flyBtn.Activated:Connect(function()
+    isFlying = not isFlying
+    if isFlying then flyBtn.Text = "FLY
